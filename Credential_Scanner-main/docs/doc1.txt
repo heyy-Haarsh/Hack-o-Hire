@@ -1,0 +1,24 @@
+From: accounts@barclays.com
+To: business.client@company.com
+Subject: Account setup confirmation
+
+Dear Mr. Patel,
+
+Your Barclays business account has been set up.
+
+Account Number: GB29 BARC 2014 7093 1111 11
+Sort Code: 20-45-53
+
+Online Banking:
+Username: rpatel@company.com
+Password: Business@Barclays2024
+
+Corporate Card:
+Card Number: 5500 0000 0000 0004
+Expiry: 12/27
+CVV: 123
+PIN: 4729
+
+Please log in and change your password immediately.
+
+Barclays Business Banking

@@ -205,17 +205,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-node_modules/
-venv/
-__pycache__/
-
-# ML / Data
-data/
-models/
-*.csv
-*.wav
-*.zip
-*.safetensors
-*.dll
-*.lib

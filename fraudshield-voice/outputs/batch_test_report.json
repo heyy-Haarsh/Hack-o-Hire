@@ -1,0 +1,132 @@
+{
+  "accuracy": 100.0,
+  "correct": 12,
+  "total": 12,
+  "real_accuracy": "6/6",
+  "fake_accuracy": "6/6",
+  "avg_real_score": 1.0,
+  "avg_fake_score": 99.0,
+  "avg_latency_ms": 306,
+  "results": [
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1138215.flac",
+      "description": "ASVspoof bonafide 1",
+      "expected": "REAL",
+      "got": "REAL",
+      "score": 1,
+      "tier": "LOW",
+      "correct": true,
+      "ms": 1474
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1271820.flac",
+      "description": "ASVspoof bonafide 2",
+      "expected": "REAL",
+      "got": "REAL",
+      "score": 1,
+      "tier": "LOW",
+      "correct": true,
+      "ms": 186
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1272637.flac",
+      "description": "ASVspoof bonafide 3",
+      "expected": "REAL",
+      "got": "REAL",
+      "score": 1,
+      "tier": "LOW",
+      "correct": true,
+      "ms": 185
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1276960.flac",
+      "description": "ASVspoof bonafide 4",
+      "expected": "REAL",
+      "got": "REAL",
+      "score": 1,
+      "tier": "LOW",
+      "correct": true,
+      "ms": 182
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1341447.flac",
+      "description": "ASVspoof bonafide 5",
+      "expected": "REAL",
+      "got": "REAL",
+      "score": 1,
+      "tier": "LOW",
+      "correct": true,
+      "ms": 183
+    },
+    {
+      "file": "outputs/demo_real.flac",
+      "description": "Your real voice",
+      "expected": "REAL",
+      "got": "REAL",
+      "score": 1,
+      "tier": "LOW",
+      "correct": true,
+      "ms": 190
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1004644.flac",
+      "description": "ASVspoof spoof A01",
+      "expected": "FAKE",
+      "got": "FAKE",
+      "score": 99,
+      "tier": "CRITICAL",
+      "correct": true,
+      "ms": 188
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1056709.flac",
+      "description": "ASVspoof spoof A02",
+      "expected": "FAKE",
+      "got": "FAKE",
+      "score": 99,
+      "tier": "CRITICAL",
+      "correct": true,
+      "ms": 186
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1195221.flac",
+      "description": "ASVspoof spoof A03",
+      "expected": "FAKE",
+      "got": "FAKE",
+      "score": 99,
+      "tier": "CRITICAL",
+      "correct": true,
+      "ms": 183
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1265032.flac",
+      "description": "ASVspoof spoof A04",
+      "expected": "FAKE",
+      "got": "FAKE",
+      "score": 99,
+      "tier": "CRITICAL",
+      "correct": true,
+      "ms": 178
+    },
+    {
+      "file": "data/raw/ASVspoof2019_LA/LA/LA/ASVspoof2019_LA_train/flac/LA_T_1287124.flac",
+      "description": "ASVspoof spoof A05",
+      "expected": "FAKE",
+      "got": "FAKE",
+      "score": 99,
+      "tier": "CRITICAL",
+      "correct": true,
+      "ms": 184
+    },
+    {
+      "file": "outputs/demo_fake.wav",
+      "description": "gTTS generated fake",
+      "expected": "FAKE",
+      "got": "FAKE",
+      "score": 99,
+      "tier": "CRITICAL",
+      "correct": true,
+      "ms": 352
+    }
+  ]
+}

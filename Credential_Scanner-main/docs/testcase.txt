@@ -1,0 +1,242 @@
+From: security@barclays-verify.com
+To: customer@gmail.com
+Subject: URGENT: Your Barclays account is suspended
+
+Dear Valued Customer,
+
+Your Barclays account has been suspended due to unusual activity.
+Act now to avoid permanent closure.
+
+Please verify using the following details:
+Password: Hello@1234
+Card Number: 4111 1111 1111 1111
+CVV: 453
+OTP: 748291
+
+Regards,
+Barclays Security Team
+
+Expected Output
+Risk Banner:
+Critical Risk
+Score: 100 / 100
+Recommended action: IMMEDIATE: Quarantine + escalate to SOC + notify compliance.
+Finding Counts:
+Total:    6
+Critical: 3
+High:     3
+Medium:   0
+Low:      0
+Layer 2 — Regex — 4 findings:
+1. visa_card     → Critical → 4111************
+2. cvv           → Critical → CVV:****
+3. password_plain → High   → Hell************
+4. otp_code      → High    → 7482****
+Layer 3 — Entropy — 0 findings:
+No high entropy strings in this email
+All credentials are short and structured
+Layer 4 — NER — 0 findings:
+No person names or organisations
+near credential keywords
+Layer 5 — LLM — 3 findings:
+1. password      → High     → Hell****
+   evidence: "Password: Hello@1234"
+
+2. spoken_otp    → High     → 7482****
+   evidence: "OTP: 748291"
+
+3. phishing_intent → High   → N/A
+   evidence: "Urgent tone, account suspension threat,
+              impersonating Barclays security team"
+
+Context Signals:
+has_urgency_language:          true  ← "act now", "suspended"
+has_internal_exposure_signals: false
+has_impersonation_signals:     true  ← "barclays security team"
+has_multiple_credential_types: true  ← payment + credential + auth_code
+has_attachment_reference:      false
+multi_layer_confirmed_count:   1     ← password found by regex + LLM
+context_multiplier:            1.85
+Human Summary:
+Found 6 credentials: 1x Visa card number, 1x CVV,
+1x Password in plain text, 1x OTP code, 1x spoken OTP,
+1x phishing intent detected.
+1 finding confirmed by multiple layers.
+Bank impersonation signals detected.
+Urgency/pressure language present.
+
+
+//Second
+
+From: newsletter@barclays.com
+To: customer@gmail.com
+Subject: Your March 2026 statement is ready
+
+Dear Customer,
+
+Your monthly account statement for March 2026 is now available
+to view in your Barclays online banking portal.
+
+If you have any questions please contact us on 0800 400 100.
+
+Thank you for banking with Barclays.
+
+Barclays Customer Services
+
+
+//third
+
+From: alerts@barclays-secure.net
+To: customer@gmail.com
+Subject: Action Required: Verify your transaction
+
+Dear Valued Customer,
+
+A transaction of £2,500 has been initiated from your account.
+If this was not you please verify immediately.
+
+Your verification code is: 847291
+Your card ending in 1234 needs re-verification.
+Card Number: 4532 0151 1283 0366
+CVV: 452
+
+Click here immediately or your account will be blocked.
+
+Barclays Fraud Prevention Team
+
+
+
+
+
+
+
+
+
+From: alerts@barclays-secure.net
+Subject: Action Required: Verify your transaction
+Card Number: 4532 0151 1283 0366
+CVV: 452
+OTP: 847291
+
+Critical Risk
+Score: 100 / 100
+
+Recommended action: IMMEDIATE: Quarantine + escalate to SOC + notify compliance.
+
+Total:    6-7
+Critical: 4
+High:     2-3
+Medium:   0
+Low:      0
+
+1. visa_card
+   Risk: Critical | Confidence: 90%
+   Redacted: 4532************
+   Context: "Card Number: 4532 0151 1283 0366"
+   Detected by: regex
+
+2. cvv
+   Risk: Critical | Confidence: 90%
+   Redacted: CVV:****
+   Context: "CVV: 452"
+   Detected by: regex
+
+3. otp_code
+   Risk: High | Confidence: 90%
+   Redacted: 8472****
+   Context: "Your verification code is: 847291"
+   Detected by: regex
+
+1. card_number
+   Risk: Critical | Confidence: 95%
+   Context: "Card Number: 4532 0151 1283 0366"
+   Detected by: regex + llm
+   Badge: multi-layer confirmed
+
+2. otp
+   Risk: Critical | Confidence: 95%
+   Context: "Your verification code is: 847291"
+   Detected by: regex + llm
+   Badge: multi-layer confirmed
+
+3. cvv
+   Risk: Critical | Confidence: 95%
+   Context: "CVV: 452"
+   Detected by: regex + llm
+   Badge: multi-layer confirmed
+
+4. phishing_intent
+   Risk: High | Confidence: 85%
+   Context: "Urgent tone — act now or account blocked;
+             Bank impersonation — Barclays Fraud Prevention;
+             Transaction threat to create fear"
+   Detected by: llm only
+
+
+has_urgency_language:          true  ← "immediately", "blocked"
+has_internal_exposure_signals: false
+has_impersonation_signals:     true  ← "Barclays Fraud Prevention Team"
+has_multiple_credential_types: true  ← payment + auth_code
+has_attachment_reference:      false
+multi_layer_confirmed_count:   3     ← card + CVV + OTP
+context_multiplier:            2.05
+
+//5 th 
+
+From: manager@company.com
+To: newjoiner@company.com
+Subject: Welcome call follow up
+
+Hi Sarah,
+
+Great speaking with you today. Just to confirm what
+we discussed on the call.
+
+Your system PIN is two four seven nine and your
+backup passphrase is silver cloud morning.
+
+Your security question answer is your mother's
+maiden name which is Henderson.
+
+Do not write any of this down anywhere.
+
+Best regards,
+Michael
+
+
+//6 th
+
+From: accounts@barclays.com
+To: business.client@company.com
+Subject: Account setup confirmation
+
+Dear Mr. Patel,
+
+Your Barclays business account has been set up.
+
+Account Number: GB29 BARC 2014 7093 1111 11
+Sort Code: 20-45-53
+
+Online Banking:
+Username: rpatel@company.com
+Password: Business@Barclays2024
+
+Corporate Card:
+Card Number: 5500 0000 0000 0004
+Expiry: 12/27
+CVV: 123 
+PIN: 4729
+
+Please log in and change your password immediately.
+
+Barclays Business Banking
+
+
+
+EmailExpected scoreBest demonstrates
+Email 1 clean0 CleanNo false positives
+Email 2 IT leak80 HighInternal exposure
+Email 3 phishing100 CriticalCore use case
+Email 4 API keys75 HighEntropy layer
+Email 5 spoken50 MediumLLM exclusive
+Email 6 banking100 CriticalAll layers together

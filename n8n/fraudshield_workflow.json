@@ -1,0 +1,214 @@
+{
+  "name": "FraudShield — Incident Response",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fraudshield",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "FraudShield Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "fraudshield-main"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-risk",
+              "leftValue": "={{ $json.body.risk_score }}",
+              "rightValue": 70,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-risk",
+      "name": "Risk ≥ 70?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-critical",
+              "leftValue": "={{ $json.body.tier }}",
+              "rightValue": "CRITICAL",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-critical",
+      "name": "Tier = CRITICAL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [720, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a structured incident log entry\nconst body = $input.first().json.body;\nconst now  = new Date().toISOString();\n\nreturn [{\n  json: {\n    incident_id:    `FS-${Date.now()}`,\n    logged_at:      now,\n    tier:           body.tier,\n    risk_score:     body.risk_score,\n    verdict:        body.verdict,\n    source:         body.source,\n    prediction_id:  body.prediction_id,\n    outlook_action: body.outlook_action,\n    ai_generated:   body.ai_generated,\n    top_indicators: body.top_indicators,\n    header_flags:   body.header_flags,\n    email_preview:  body.email_preview,\n    requires_approval: body.tier === 'CRITICAL',\n    audit_trail:    `[${now}] FraudShield detected ${body.tier} threat. Score: ${body.risk_score}/100.`\n  }\n}];"
+      },
+      "id": "node-log",
+      "name": "Build Incident Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 160]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ HIGH Risk Email Detected\n\n**Risk Score:** {{ $json.body.risk_score }}/100  \n**Tier:** {{ $json.body.tier }}  \n**Verdict:** {{ $json.body.verdict }}  \n**Source:** {{ $json.body.source }}  \n**Action:** {{ $json.body.outlook_action }}\n\n**Top Indicators:**\n{{ $json.body.top_indicators.join('\\n• ') }}\n\n**Email Preview:**\n{{ $json.body.email_preview }}\n\n---\n*Logged by FraudShield Incident Response — Barclays Hack-o-Hire*",
+        "height": 400,
+        "width": 350
+      },
+      "id": "node-high-note",
+      "name": "HIGH — Log Quietly",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [720, 460]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {
+          "webhookSuffix": "/approval"
+        }
+      },
+      "id": "node-wait",
+      "name": "Wait for Human Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1200, 80],
+      "webhookId": "fraudshield-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "cond-approved",
+              "leftValue": "={{ $json.query.approved }}",
+              "rightValue": "true",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-approved",
+      "name": "Analyst Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1440, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quarantine confirmed — build final audit entry\nconst incident = $('Build Incident Log').first().json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    ...incident,\n    quarantine_confirmed_at: now,\n    action_taken: 'QUARANTINE_CONFIRMED',\n    audit_trail:  incident.audit_trail + ` [${now}] Human analyst APPROVED quarantine action.`\n  }\n}];"
+      },
+      "id": "node-quarantine",
+      "name": "Quarantine Confirmed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Analyst rejected — mark as false positive\nconst incident = $('Build Incident Log').first().json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    ...incident,\n    rejected_at: now,\n    action_taken: 'FALSE_POSITIVE_MARKED',\n    audit_trail:  incident.audit_trail + ` [${now}] Human analyst REJECTED — marked as false positive.`\n  }\n}];"
+      },
+      "id": "node-false-positive",
+      "name": "Mark False Positive",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"received\", \"incident_triggered\": true, \"tier\": \"{{ $('FraudShield Webhook').first().json.body.tier }}\", \"message\": \"FraudShield incident response workflow activated\" }",
+        "options": {}
+      },
+      "id": "node-respond-ok",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 480]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"below_threshold\", \"tier\": \"{{ $('FraudShield Webhook').first().json.body.tier }}\", \"message\": \"Risk score below response threshold\" }",
+        "options": {}
+      },
+      "id": "node-respond-low",
+      "name": "Respond — Below Threshold",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 560]
+    }
+  ],
+  "connections": {
+    "FraudShield Webhook": {
+      "main": [
+        [
+          { "node": "Risk ≥ 70?", "type": "main", "index": 0 },
+          { "node": "Respond 200 OK", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Risk ≥ 70?": {
+      "main": [
+        [{ "node": "Tier = CRITICAL?", "type": "main", "index": 0 }],
+        [{ "node": "Respond — Below Threshold", "type": "main", "index": 0 }]
+      ]
+    },
+    "Tier = CRITICAL?": {
+      "main": [
+        [{ "node": "Build Incident Log", "type": "main", "index": 0 }],
+        [{ "node": "Build Incident Log", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Incident Log": {
+      "main": [
+        [{ "node": "Wait for Human Approval", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait for Human Approval": {
+      "main": [
+        [{ "node": "Analyst Approved?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Analyst Approved?": {
+      "main": [
+        [{ "node": "Quarantine Confirmed", "type": "main", "index": 0 }],
+        [{ "node": "Mark False Positive", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fraudshield-hack-o-hire"
+  },
+  "id": "fraudshield-incident-response",
+  "tags": [{ "createdAt": "2026-03-24", "name": "FraudShield" }]
+}

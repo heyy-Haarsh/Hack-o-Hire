@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+pymupdf
+pillow
+pytesseract
+python-docx
+pydantic
+nltk
+ollama  
