@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import time
 import sys
+import threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import DEVICE, MODELS_DIR
@@ -26,7 +27,6 @@ TIERS = [
     (31, "MEDIUM",   "FLAG  — route to human reviewer within 1 hour"),
     (0,  "LOW",      "ALLOW — log and continue monitoring"),
 ]
-
 
 def get_tier(score: int):
     for threshold, tier, action in TIERS:
@@ -134,7 +134,7 @@ Be specific about what the audio signals mean. No jargon."""
 
     processing_ms = round((time.time() - t0) * 1000)
 
-    return {
+    result = {
         "verdict":            "FAKE" if final >= THRESHOLD else "REAL",
         "risk_score":          risk,
         "tier":                tier,
@@ -151,6 +151,32 @@ Be specific about what the audio signals mean. No jargon."""
         "processing_ms":       processing_ms,
         "audio_file":          str(audio_path),
     }
+
+    # ── Fire n8n Incident Response Webhook ──
+    if tier in ("HIGH", "CRITICAL"):
+        import requests
+        def notify_n8n(payload):
+            try:
+                requests.post("http://localhost:5678/webhook/fraudshield", json=payload, timeout=2)
+            except:
+                pass
+        
+        n8n_payload = {
+            "source":         "voice_api",
+            "tier":           tier,
+            "risk_score":     risk,
+            "verdict":        result["verdict"],
+            "prediction_id":  None,
+            "outlook_action": action,
+            "top_indicators": indicators[:3],
+            "header_flags":   [],  # Not applicable for voice
+            "email_preview":  f"Suspicious audio detected: {audio_path.split('/')[-1]}",
+            "ai_generated":   True if final >= THRESHOLD else False,
+            "llm_summary":    explanation,  # Pass the LLM generation to n8n!
+        }
+        threading.Thread(target=notify_n8n, args=(n8n_payload,), daemon=True).start()
+
+    return result
 
 
 if __name__ == "__main__":

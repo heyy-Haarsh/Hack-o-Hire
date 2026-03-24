@@ -9,6 +9,7 @@
     const VOICE_API = "https://localhost:3000/voice";
     const CRED_API = "https://localhost:3000/credential";
     const GUARD_API = "https://localhost:3000/guard";  // Prompt Guard middleware
+    const N8N_WEBHOOK = "http://localhost:5678/webhook/fraudshield";  // Direct n8n pipeline webhook
 
     // ── State ──────────────────────────────────────────────────────
     let lastResult = null;
@@ -151,38 +152,58 @@
         }
     }
 
-    // ── Email analysis ─────────────────────────────────────────────
     async function analyzeEmail() {
+        showLoading();
+        hideFeedback();
+
         try {
-            showLoading();
-            hideFeedback();
-
             const item = Office.context.mailbox.item;
+            if (!item) {
+                showError("No email selected.");
+                return;
+            }
 
-            lastEmailData = {
-                subject: item.subject || "",
-                sender: item.from ? item.from.emailAddress : "",
-                reply_to: item.replyTo && item.replyTo.length > 0
-                    ? item.replyTo[0].emailAddress : "",
-                receiver: item.to && item.to.length > 0
-                    ? item.to[0].emailAddress : "",
-                cc: item.cc ? item.cc.map(r => r.emailAddress).join(",") : "",
-                body: await getEmailBody(item),
-                attachment_names: item.attachments ? item.attachments.map(a => a.name) : []
+            // Crash-proof property extraction — treat everything as optional
+            let subject = "";
+            let sender = "";
+            
+            try { subject = item.subject || ""; } catch(e) {}
+            try { sender = item.from ? (item.from.emailAddress || "") : ""; } catch(e) {}
+            
+            // Get body with timeout safeguard
+            const body = await getEmailBody(item);
+
+            lastEmailData = { subject, sender, body, attachment_names: [] };
+
+            console.log("Sending payload to n8n pipeline directly...");
+
+            // Build the payload
+            const payload = {
+                text: body.substring(0, 3000),
+                subject: subject,
+                sender: sender,
+                receiver: "",
+                reply_to: "",
+                cc: "",
+                use_llm: false
             };
 
+            // Send directly to n8n webhook
+            const n8nResponse = await fetch(N8N_WEBHOOK, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (!n8nResponse.ok) throw new Error(`n8n webhook returned ${n8nResponse.status}`);
+
+            console.log("n8n pipeline triggered successfully");
+
+            // Also send to local API for analysis results
             const response = await fetch(`${EMAIL_API}/analyze/email`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    text: lastEmailData.body.substring(0, 3000),
-                    subject: lastEmailData.subject,
-                    sender: lastEmailData.sender,
-                    receiver: lastEmailData.receiver,
-                    reply_to: lastEmailData.reply_to,
-                    cc: lastEmailData.cc,
-                    use_llm: false
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) throw new Error(`API returned ${response.status}`);
@@ -195,7 +216,8 @@
             console.error("Email analysis failed:", error);
             showError(
                 "FraudShield Email API not reachable.<br>" +
-                "Make sure <strong>python src/api.py</strong> is running on port 8001."
+                "Make sure <strong>python src/api.py</strong> is running on port 8001 and n8n on port 5678.<br>" +
+                "<small style='color:#888'>" + error.message + "</small>"
             );
         }
     }
@@ -627,12 +649,20 @@
 
     async function getEmailBody(item) {
         return new Promise((resolve) => {
+            // Timeout after 10s — if Outlook never fires the callback, proceed with empty string
+            const timeout = setTimeout(() => {
+                console.warn("[FraudShield] getEmailBody timed out — proceeding with empty body");
+                resolve("");
+            }, 10000);
+
             if (item.body) {
                 item.body.getAsync(Office.CoercionType.Text, function (r) {
+                    clearTimeout(timeout);
                     resolve(r.status === Office.AsyncResultStatus.Succeeded
                         ? r.value || "" : "");
                 });
             } else {
+                clearTimeout(timeout);
                 resolve("");
             }
         });

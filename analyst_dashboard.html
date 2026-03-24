@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FraudShield — Analyst Dashboard</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 50px; 
+            background: #0f172a; 
+            color: #f8fafc; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            text-align: center;
+        }
+        input { 
+            padding: 12px; 
+            font-size: 16px; 
+            margin: 20px 0; 
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            width: 150px;
+            text-align: center;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        button { 
+            padding: 12px 24px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.8; }
+        .approve { background: #10b981; color: white; }
+        .reject { background: #ef4444; color: white; }
+        #status {
+            margin-top: 20px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 style="margin-top:0;">🛡️ FraudShield Analyst</h1>
+        <p style="color: #94a3b8;">Pending Incident Approval Queue</p>
+        
+        <p>Look at the <strong>top-left corner</strong> of n8n to find the Execution ID (e.g., "ID#2"). Enter it below:</p>
+        
+        <input type="text" id="execId" placeholder="ID (e.g., 2)">
+        
+        <div class="btn-group">
+            <button class="approve" onclick="submitAction(true)">✅ Approve Quarantine</button>
+            <button class="reject" onclick="submitAction(false)">❌ Mark False Positive</button>
+        </div>
+        
+        <p id="status"></p>
+    </div>
+
+    <script>
+        function submitAction(isApproved) {
+            const id = document.getElementById('execId').value.replace(/\D/g,''); // Get just the number
+            if (!id) return alert('Please enter the Execution ID from n8n');
+            
+            // Build the n8n webhook-waiting URL
+            const url = `http://localhost:5678/webhook-waiting/${id}/approval?approved=${isApproved}`;
+            document.getElementById('status').innerText = 'Sending action to n8n...';
+            
+            fetch(url)
+                .then(r => r.text())
+                .then(text => {
+                    document.getElementById('status').innerText = '✅ Action received! Check n8n.';
+                })
+                .catch(err => {
+                    document.getElementById('status').innerText = 'Failed: Make sure n8n is running. (' + err + ')';
+                });
+        }
+    </script>
+</body>
+</html>

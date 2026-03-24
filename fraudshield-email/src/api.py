@@ -48,6 +48,7 @@ def fire_n8n_webhook(result: dict, email_text: str, source: str = "email_api"):
         "ai_generated":   result.get("ai_generated_probability", 0) > 0.5,
         "outlook_action": result.get("outlook_action", "FLAG"),
         "email_preview":  email_text[:300] if email_text else "",
+        "llm_summary":    result.get("explanation", ""),
     }
 
     def _post():
