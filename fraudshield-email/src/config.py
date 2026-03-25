@@ -23,7 +23,7 @@ PHISHING   = 1
 
 # Risk tiers
 TIERS = [
-    (86, "CRITICAL", "QUARANTINE"),
+    (70, "CRITICAL", "QUARANTINE"),
     (61, "HIGH",     "JUNK"),
     (31, "MEDIUM",   "FLAG"),
     (0,  "LOW",      "ALLOW"),

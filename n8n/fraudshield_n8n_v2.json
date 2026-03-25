@@ -1,5 +1,5 @@
 {
-  "name": "FraudShield — Enhanced Incident Response v2",
+  "name": "FraudShield — Enhanced Incident Response v3",
   "nodes": [
     {
       "parameters": {
@@ -15,10 +15,9 @@
       "position": [100, 300],
       "webhookId": "fraudshield-main"
     },
-
     {
       "parameters": {
-        "jsCode": "// Enrich and normalize the incoming FraudShield payload\nconst body = $input.first().json.body || $input.first().json;\nconst now  = new Date().toISOString();\n\nconst tierColors = {\n  CRITICAL: '#dc3545',\n  HIGH:     '#fd7e14',\n  MEDIUM:   '#ffc107',\n  LOW:      '#28a745'\n};\n\nreturn [{\n  json: {\n    incident_id:       `FS-${Date.now()}`,\n    logged_at:         now,\n    tier:              body.tier              || 'UNKNOWN',\n    risk_score:        body.risk_score        || 0,\n    verdict:           body.verdict           || 'UNKNOWN',\n    outlook_action:    body.outlook_action    || 'REVIEW',\n    prediction_id:     body.prediction_id     || null,\n    ai_generated_prob: body.ai_generated_probability || 0,\n    roberta_prob:      body.roberta_phishing_prob     || 0,\n    top_indicators:    body.top_indicators    || [],\n    header_flags:      body.header_flags      || [],\n    injection_score:   body.injection_score   || 0,\n    email_preview:     body.email_preview     || '',\n    source:            body.source            || 'outlook_plugin',\n    tier_color:        tierColors[body.tier]  || '#888888',\n    requires_approval: body.tier === 'CRITICAL',\n    raw:               body\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst now  = new Date().toISOString();\nconst tierColors = { CRITICAL: '#dc3545', HIGH: '#fd7e14', MEDIUM: '#ffc107', LOW: '#28a745' };\nreturn [{ json: {\n  incident_id:       `FS-${Date.now()}`,\n  logged_at:         now,\n  tier:              body.tier              || 'UNKNOWN',\n  risk_score:        body.risk_score        || 0,\n  verdict:           body.verdict           || 'UNKNOWN',\n  outlook_action:    body.outlook_action    || 'REVIEW',\n  prediction_id:     body.prediction_id     || null,\n  ai_generated_prob: body.ai_generated_probability || 0,\n  roberta_prob:      body.roberta_phishing_prob     || 0,\n  top_indicators:    body.top_indicators    || [],\n  header_flags:      body.header_flags      || [],\n  injection_score:   body.injection_score   || 0,\n  email_preview:     body.email_preview     || '',\n  source:            body.source            || 'outlook_plugin',\n  tier_color:        tierColors[body.tier]  || '#888888',\n  requires_approval: body.tier === 'CRITICAL',\n  raw:               body\n}}];"
       },
       "id": "node-enrich",
       "name": "Enrich Payload",
@@ -26,20 +25,14 @@
       "typeVersion": 2,
       "position": [300, 300]
     },
-
     {
       "parameters": {
         "conditions": {
-          "conditions": [
-            {
-              "id": "cond-risk",
-              "leftValue": "={{ $json.risk_score }}",
-              "rightValue": 30,
-              "operator": { "type": "number", "operation": "gte" }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-risk", "leftValue": "={{ $json.risk_score }}", "rightValue": 30, "operator": { "type": "number", "operation": "gte" } }],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
       "id": "node-if-risk",
       "name": "Risk >= 30?",
@@ -47,10 +40,9 @@
       "typeVersion": 2.2,
       "position": [520, 300]
     },
-
     {
       "parameters": {
-        "jsCode": "// Log low-risk event quietly to PostgreSQL via FraudShield API\nconst d = $input.first().json;\nreturn [{ json: { status: 'logged_quietly', incident_id: d.incident_id, tier: d.tier, risk_score: d.risk_score } }];"
+        "jsCode": "const d = $input.first().json;\nreturn [{ json: { status: 'logged_quietly', incident_id: d.incident_id, tier: d.tier, risk_score: d.risk_score } }];"
       },
       "id": "node-log-low",
       "name": "Log Quietly",
@@ -58,68 +50,34 @@
       "typeVersion": 2,
       "position": [740, 460]
     },
-
     {
       "parameters": {
-        "model": "llama3",
-        "messages": {
-          "values": [
-            {
-              "role": "system",
-              "content": "You are a senior fraud analyst at Barclays Bank. Write concise, professional incident summaries. Be direct and specific. Maximum 3 sentences. Always mention the risk score, top threat indicators, and recommended action."
-            },
-            {
-              "role": "user",
-              "content": "=Summarize this fraud incident for the security team:\n\nRisk Score: {{ $json.risk_score }}/100\nTier: {{ $json.tier }}\nVerdict: {{ $json.verdict }}\nTop Indicators: {{ $json.top_indicators.join(', ') }}\nHeader Flags: {{ $json.header_flags.join(', ') }}\nAI Generated Probability: {{ Math.round($json.ai_generated_prob * 100) }}%\nRoBERTa Phishing Confidence: {{ Math.round($json.roberta_prob * 100) }}%\nInjection Score: {{ $json.injection_score }}/100\n\nWrite a 2-3 sentence summary for a security analyst that explains what was detected, why it is dangerous, and what action should be taken."
-            }
-          ]
-        },
-        "options": {
-          "baseURL": "http://localhost:11434/v1"
-        }
-      },
-      "id": "node-llm-summary",
-      "name": "LLM — Generate Incident Summary",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
-      "typeVersion": 1,
-      "position": [740, 160]
-    },
-
-    {
-      "parameters": {
-        "jsCode": "// Merge LLM summary with enriched incident data\nconst incident = $('Enrich Payload').first().json;\nconst llmOutput = $input.first().json;\nconst summary = llmOutput.content || llmOutput.text || llmOutput.message?.content || 'LLM summary unavailable — review manually.';\n\nreturn [{\n  json: {\n    ...incident,\n    llm_summary: summary,\n    audit_trail: `[${incident.logged_at}] FraudShield detected ${incident.tier} threat. Score: ${incident.risk_score}/100. LLM Summary: ${summary}`\n  }\n}];"
+        "jsCode": "const incident = $input.first().json;\nconst now = new Date().toISOString();\nlet llmSummary = `Automated analysis: ${incident.tier} threat detected with score ${incident.risk_score}/100. Verdict: ${incident.verdict}. Immediate human review recommended.`;\ntry {\n  const prompt = `You are a senior fraud analyst at Barclays. Risk Score: ${incident.risk_score}/100. Tier: ${incident.tier}. Verdict: ${incident.verdict}. Top Indicators: ${(incident.top_indicators||[]).join(', ')}. Write a 2-sentence professional incident summary.`;\n  const resp = await fetch('http://localhost:11434/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'llama3', prompt, stream: false }), signal: AbortSignal.timeout(8000) });\n  if (resp.ok) { const data = await resp.json(); if (data.response) llmSummary = data.response.trim(); }\n} catch(e) {}\nreturn [{ json: { ...incident, llm_summary: llmSummary, audit_trail: `[${now}] FraudShield detected ${incident.tier} threat. Score: ${incident.risk_score}/100. LLM: ${llmSummary}` } }];"
       },
       "id": "node-merge",
-      "name": "Merge LLM + Incident",
+      "name": "LLM + Incident Log",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 160]
+      "position": [740, 160]
     },
-
     {
       "parameters": {
         "conditions": {
-          "conditions": [
-            {
-              "id": "cond-critical",
-              "leftValue": "={{ $json.tier }}",
-              "rightValue": "CRITICAL",
-              "operator": { "type": "string", "operation": "equals" }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-critical", "leftValue": "={{ $json.tier }}", "rightValue": "CRITICAL", "operator": { "type": "string", "operation": "equals" } }],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
       "id": "node-if-critical",
       "name": "CRITICAL?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1180, 160]
+      "position": [960, 160]
     },
-
     {
       "parameters": {
-        "jsCode": "// Build HTML approval email for CRITICAL incidents\nconst d = $input.first().json;\nconst baseUrl = 'http://localhost:5678/webhook/fraudshield-approval';\nconst approveUrl = `${baseUrl}?incident_id=${d.incident_id}&approved=true&prediction_id=${d.prediction_id}`;\nconst rejectUrl  = `${baseUrl}?incident_id=${d.incident_id}&approved=false&prediction_id=${d.prediction_id}`;\n\nconst indicatorsList = (d.top_indicators || []).map(i => `<li style='margin:4px 0;color:#333'>${i}</li>`).join('');\nconst headersList    = (d.header_flags   || []).map(i => `<li style='margin:4px 0;color:#dc3545'>${i}</li>`).join('');\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head><meta charset='UTF-8'></head>\n<body style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#f5f5f5;padding:20px'>\n  <div style='background:#00395d;color:white;padding:20px;border-radius:8px 8px 0 0'>\n    <h1 style='margin:0;font-size:22px'>🚨 CRITICAL Fraud Alert</h1>\n    <p style='margin:8px 0 0;opacity:0.8'>FraudShield AI — Barclays Incident Response</p>\n  </div>\n  <div style='background:white;padding:20px;border-radius:0 0 8px 8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)'>\n    <div style='background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px;margin-bottom:16px'>\n      <strong>Incident ID:</strong> ${d.incident_id}<br>\n      <strong>Detected at:</strong> ${d.logged_at}\n    </div>\n    <table style='width:100%;border-collapse:collapse;margin-bottom:16px'>\n      <tr style='background:#f8f9fa'>\n        <td style='padding:10px;border:1px solid #dee2e6;font-weight:600'>Risk Score</td>\n        <td style='padding:10px;border:1px solid #dee2e6;color:#dc3545;font-weight:700;font-size:20px'>${d.risk_score}/100</td>\n      </tr>\n      <tr>\n        <td style='padding:10px;border:1px solid #dee2e6;font-weight:600'>Tier</td>\n        <td style='padding:10px;border:1px solid #dee2e6'><span style='background:#dc3545;color:white;padding:3px 10px;border-radius:12px;font-weight:700'>${d.tier}</span></td>\n      </tr>\n      <tr style='background:#f8f9fa'>\n        <td style='padding:10px;border:1px solid #dee2e6;font-weight:600'>Verdict</td>\n        <td style='padding:10px;border:1px solid #dee2e6'>${d.verdict}</td>\n      </tr>\n      <tr>\n        <td style='padding:10px;border:1px solid #dee2e6;font-weight:600'>AI Generated</td>\n        <td style='padding:10px;border:1px solid #dee2e6'>${Math.round(d.ai_generated_prob * 100)}% probability</td>\n      </tr>\n      <tr style='background:#f8f9fa'>\n        <td style='padding:10px;border:1px solid #dee2e6;font-weight:600'>Action</td>\n        <td style='padding:10px;border:1px solid #dee2e6'><strong>${d.outlook_action}</strong></td>\n      </tr>\n    </table>\n    <div style='background:#f8f9fa;border-radius:6px;padding:12px;margin-bottom:16px'>\n      <strong style='color:#00395d'>AI Analyst Summary:</strong>\n      <p style='margin:8px 0 0;color:#333;line-height:1.6'>${d.llm_summary}</p>\n    </div>\n    ${indicatorsList ? `<div style='margin-bottom:16px'><strong>Top Indicators:</strong><ul>${indicatorsList}</ul></div>` : ''}\n    ${headersList ? `<div style='margin-bottom:16px'><strong>Header Flags:</strong><ul>${headersList}</ul></div>` : ''}\n    <div style='text-align:center;margin-top:24px'>\n      <a href='${approveUrl}' style='background:#dc3545;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:16px;margin-right:12px;display:inline-block'>QUARANTINE EMAIL</a>\n      <a href='${rejectUrl}' style='background:#28a745;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block'>MARK AS SAFE</a>\n    </div>\n    <p style='text-align:center;margin-top:16px;color:#888;font-size:12px'>This action will be permanently logged in the FraudShield audit trail.</p>\n  </div>\n</body>\n</html>`;\n\nreturn [{ json: { ...d, approval_email_html: html, approve_url: approveUrl, reject_url: rejectUrl } }];"
+        "jsCode": "const d = $input.first().json;\nconst baseUrl = 'http://localhost:5678/webhook/fraudshield-approval';\nconst approveUrl = `${baseUrl}?incident_id=${d.incident_id}&approved=true&prediction_id=${d.prediction_id}`;\nconst rejectUrl  = `${baseUrl}?incident_id=${d.incident_id}&approved=false&prediction_id=${d.prediction_id}`;\nconst indicatorsList = (d.top_indicators || []).map(i => `<li style='margin:4px 0;color:#333'>${i}</li>`).join('');\nconst html = `<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#f5f5f5;padding:20px'><div style='background:#00395d;color:white;padding:20px;border-radius:8px 8px 0 0'><h1 style='margin:0;font-size:22px'>🚨 CRITICAL Fraud Alert</h1><p style='margin:8px 0 0;opacity:0.8'>FraudShield AI — Barclays Incident Response</p></div><div style='background:white;padding:20px;border-radius:0 0 8px 8px'><p><strong>Incident:</strong> ${d.incident_id} | <strong>Score:</strong> ${d.risk_score}/100 | <strong>Tier:</strong> ${d.tier}</p><p><strong>AI Summary:</strong> ${d.llm_summary}</p><div style='text-align:center;margin-top:24px'><a href='${approveUrl}' style='background:#dc3545;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;margin-right:12px'>QUARANTINE EMAIL</a><a href='${rejectUrl}' style='background:#28a745;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700'>MARK AS SAFE</a></div></div></body></html>`;\nreturn [{ json: { ...d, approval_email_html: html, approve_url: approveUrl, reject_url: rejectUrl } }];"
       },
       "id": "node-build-email",
       "name": "Build Approval Email",
@@ -127,10 +85,9 @@
       "typeVersion": 2,
       "position": [1400, 80]
     },
-
     {
       "parameters": {
-        "jsCode": "// Build HIGH tier Slack-style notification\nconst d = $input.first().json;\nconst indicators = (d.top_indicators || []).slice(0, 3).join(' | ');\n\nreturn [{\n  json: {\n    ...d,\n    slack_message: `*HIGH Risk Email Detected*\\n*Score:* ${d.risk_score}/100  *Tier:* ${d.tier}\\n*Verdict:* ${d.verdict}  *Action:* ${d.outlook_action}\\n*AI Summary:* ${d.llm_summary}\\n*Top Indicators:* ${indicators}\\n*Incident ID:* ${d.incident_id}`,\n    notification_type: 'HIGH'\n  }\n}];"
+        "jsCode": "const d = $input.first().json;\nconst indicators = (d.top_indicators || []).slice(0, 3).join(' | ');\nreturn [{ json: { ...d, slack_message: `*HIGH Risk Email Detected*\\n*Score:* ${d.risk_score}/100  *Tier:* ${d.tier}\\n*Verdict:* ${d.verdict}  *Action:* ${d.outlook_action}\\n*AI Summary:* ${d.llm_summary}\\n*Top Indicators:* ${indicators}\\n*Incident ID:* ${d.incident_id}`, notification_type: 'HIGH' } }];"
       },
       "id": "node-build-high-notif",
       "name": "Build HIGH Notification",
@@ -138,46 +95,30 @@
       "typeVersion": 2,
       "position": [1400, 280]
     },
-
     {
       "parameters": {
-        "fromEmail": "fraudshield@barclays-demo.local",
-        "toEmail": "security-team@barclays-demo.local",
-        "subject": "=🚨 [{{ $json.tier }}] FraudShield Alert — {{ $json.incident_id }} — Score {{ $json.risk_score }}/100",
-        "emailType": "html",
-        "message": "={{ $json.approval_email_html }}"
+        "jsCode": "const d = $input.first().json;\nconsole.log('\\n' + '='.repeat(60));\nconsole.log('🚨  CRITICAL INCIDENT — ANALYST ACTION REQUIRED');\nconsole.log('='.repeat(60));\nconsole.log('Incident ID  : ' + d.incident_id);\nconsole.log('Risk Score   : ' + d.risk_score + '/100');\nconsole.log('Tier         : ' + d.tier);\nconsole.log('Verdict      : ' + d.verdict);\nconsole.log('LLM Summary  : ' + d.llm_summary);\nconsole.log('-'.repeat(60));\nconsole.log('Open analyst_dashboard.html and enter the EXECUTION ID to approve/reject');\nconsole.log('='.repeat(60) + '\\n');\nreturn [{ json: { ...d, notification_status: 'logged_to_console' } }];"
       },
       "id": "node-send-email",
       "name": "Send Approval Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [1620, 80]
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 80]
     },
-
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://localhost:5678/webhook/fraudshield-slack-mock",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "text", "value": "={{ $json.slack_message }}" },
-            { "name": "incident_id", "value": "={{ $json.incident_id }}" },
-            { "name": "tier", "value": "={{ $json.tier }}" }
-          ]
-        }
+        "jsCode": "const d = $input.first().json;\nconsole.log('=== HIGH RISK NOTIFICATION ===');\nconsole.log('Incident ID :', d.incident_id);\nconsole.log('Tier        :', d.tier, '| Score:', d.risk_score + '/100');\nconsole.log('Verdict     :', d.verdict);\nconsole.log('LLM Summary :', d.llm_summary);\nconsole.log('Indicators  :', (d.top_indicators||[]).join(' | '));\nconsole.log('==============================');\nreturn [{ json: { ...d, notification_status: 'logged_for_demo', notification_type: 'HIGH' } }];"
       },
       "id": "node-slack",
-      "name": "Slack Notification",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1620, 280]
+      "name": "Log HIGH Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 280]
     },
-
     {
       "parameters": {
         "resume": "webhook",
-        "options": { "webhookSuffix": "-approval" }
+        "options": {}
       },
       "id": "node-wait",
       "name": "Wait for Human Approval",
@@ -186,20 +127,14 @@
       "position": [1840, 80],
       "webhookId": "fraudshield-approval"
     },
-
     {
       "parameters": {
         "conditions": {
-          "conditions": [
-            {
-              "id": "cond-approved",
-              "leftValue": "={{ $json.query.approved }}",
-              "rightValue": "true",
-              "operator": { "type": "string", "operation": "equals" }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-approved", "leftValue": "={{ $json.query.approved }}", "rightValue": "true", "operator": { "type": "string", "operation": "equals" } }],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
       "id": "node-if-approved",
       "name": "Analyst Approved?",
@@ -207,10 +142,9 @@
       "typeVersion": 2.2,
       "position": [2060, 80]
     },
-
     {
       "parameters": {
-        "jsCode": "// QUARANTINE CONFIRMED — send feedback to FraudShield PostgreSQL\nconst incident = $('Merge LLM + Incident').first().json;\nconst query    = $input.first().json.query;\nconst now      = new Date().toISOString();\n\nreturn [{\n  json: {\n    ...incident,\n    action_taken:            'QUARANTINE_CONFIRMED',\n    analyst_decision:        'QUARANTINE',\n    analyst_decision_at:     now,\n    feedback_for_model:      'PHISHING',\n    audit_trail:             incident.audit_trail + ` [${now}] Human analyst APPROVED quarantine.`,\n    feedback_payload: {\n      prediction_id: incident.prediction_id,\n      user_verdict:  'PHISHING',\n      model_verdict: incident.verdict,\n      model_score:   incident.risk_score,\n      notes:         `n8n workflow: analyst confirmed QUARANTINE for incident ${incident.incident_id}`\n    }\n  }\n}];"
+        "jsCode": "const incident = $('LLM + Incident Log').first().json;\nconst now = new Date().toISOString();\nreturn [{ json: { ...incident, action_taken: 'QUARANTINE_CONFIRMED', analyst_decision: 'QUARANTINE', analyst_decision_at: now, feedback_for_model: 'PHISHING', audit_trail: incident.audit_trail + ` [${now}] Human analyst APPROVED quarantine.`, feedback_payload: { prediction_id: incident.prediction_id, user_verdict: 'PHISHING', model_verdict: incident.verdict, model_score: incident.risk_score, notes: `n8n: analyst confirmed QUARANTINE for ${incident.incident_id}` } } }];"
       },
       "id": "node-quarantine",
       "name": "Quarantine Confirmed",
@@ -218,10 +152,9 @@
       "typeVersion": 2,
       "position": [2280, 0]
     },
-
     {
       "parameters": {
-        "jsCode": "// FALSE POSITIVE — send correction to FraudShield retraining queue\nconst incident = $('Merge LLM + Incident').first().json;\nconst now      = new Date().toISOString();\n\nreturn [{\n  json: {\n    ...incident,\n    action_taken:        'FALSE_POSITIVE',\n    analyst_decision:    'SAFE',\n    analyst_decision_at: now,\n    feedback_for_model:  'LEGITIMATE',\n    audit_trail:         incident.audit_trail + ` [${now}] Human analyst REJECTED — false positive. Queued for retraining.`,\n    feedback_payload: {\n      prediction_id: incident.prediction_id,\n      user_verdict:  'LEGITIMATE',\n      model_verdict: incident.verdict,\n      model_score:   incident.risk_score,\n      notes:         `n8n workflow: analyst marked FALSE POSITIVE for incident ${incident.incident_id}`\n    }\n  }\n}];"
+        "jsCode": "const incident = $('LLM + Incident Log').first().json;\nconst now = new Date().toISOString();\nreturn [{ json: { ...incident, action_taken: 'FALSE_POSITIVE', analyst_decision: 'SAFE', analyst_decision_at: now, feedback_for_model: 'LEGITIMATE', audit_trail: incident.audit_trail + ` [${now}] Human analyst REJECTED — false positive.`, feedback_payload: { prediction_id: incident.prediction_id, user_verdict: 'LEGITIMATE', model_verdict: incident.verdict, model_score: incident.risk_score, notes: `n8n: analyst marked FALSE POSITIVE for ${incident.incident_id}` } } }];"
       },
       "id": "node-false-positive",
       "name": "Mark False Positive",
@@ -229,46 +162,29 @@
       "typeVersion": 2,
       "position": [2280, 200]
     },
-
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://localhost:8001/feedback",
-        "sendBody": true,
-        "contentType": "json",
-        "body": "={{ JSON.stringify($json.feedback_payload) }}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
+        "jsCode": "const d = $input.first().json;\nconsole.log('=== FEEDBACK: PHISHING CONFIRMED ===');\nconsole.log(JSON.stringify(d.feedback_payload, null, 2));\nreturn [{ json: { ...d, feedback_status: 'logged' } }];"
       },
       "id": "node-feedback-quarantine",
       "name": "Send Feedback — Phishing Confirmed",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [2500, 0]
     },
-
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://localhost:8001/feedback",
-        "sendBody": true,
-        "contentType": "json",
-        "body": "={{ JSON.stringify($json.feedback_payload) }}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
+        "jsCode": "const d = $input.first().json;\nconsole.log('=== FEEDBACK: FALSE POSITIVE ===');\nconsole.log(JSON.stringify(d.feedback_payload, null, 2));\nreturn [{ json: { ...d, feedback_status: 'logged' } }];"
       },
       "id": "node-feedback-fp",
       "name": "Send Feedback — False Positive",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [2500, 200]
     },
-
     {
       "parameters": {
-        "jsCode": "// Final audit entry — log everything to console and build summary\nconst d = $input.first().json;\nconst now = new Date().toISOString();\n\nconsole.log('=== FraudShield Audit ===');\nconsole.log(JSON.stringify({\n  incident_id:      d.incident_id,\n  tier:             d.tier,\n  risk_score:       d.risk_score,\n  action_taken:     d.action_taken,\n  analyst_decision: d.analyst_decision,\n  logged_at:        d.logged_at,\n  decided_at:       d.analyst_decision_at,\n  llm_summary:      d.llm_summary,\n  audit_trail:      d.audit_trail\n}, null, 2));\n\nreturn [{ json: { ...d, final_audit_at: now, workflow_complete: true } }];"
+        "jsCode": "const d = $input.first().json;\nconst now = new Date().toISOString();\nconsole.log('=== FraudShield Audit ===');\nconsole.log(JSON.stringify({ incident_id: d.incident_id, tier: d.tier, risk_score: d.risk_score, action_taken: d.action_taken, analyst_decision: d.analyst_decision, llm_summary: d.llm_summary, audit_trail: d.audit_trail }, null, 2));\nreturn [{ json: { ...d, final_audit_at: now, workflow_complete: true } }];"
       },
       "id": "node-audit-quarantine",
       "name": "Final Audit — Quarantine",
@@ -276,10 +192,9 @@
       "typeVersion": 2,
       "position": [2700, 0]
     },
-
     {
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst now = new Date().toISOString();\n\nconsole.log('=== FraudShield False Positive Logged ===');\nconsole.log(JSON.stringify({\n  incident_id:      d.incident_id,\n  action_taken:     d.action_taken,\n  audit_trail:      d.audit_trail,\n  retraining_note:  'Correction queued for model retraining'\n}, null, 2));\n\nreturn [{ json: { ...d, final_audit_at: now, workflow_complete: true, retraining_queued: true } }];"
+        "jsCode": "const d = $input.first().json;\nconst now = new Date().toISOString();\nconsole.log('=== FraudShield False Positive Logged ===');\nconsole.log(JSON.stringify({ incident_id: d.incident_id, action_taken: d.action_taken, audit_trail: d.audit_trail, retraining_note: 'Correction queued for model retraining' }, null, 2));\nreturn [{ json: { ...d, final_audit_at: now, workflow_complete: true, retraining_queued: true } }];"
       },
       "id": "node-audit-fp",
       "name": "Final Audit — False Positive",
@@ -287,7 +202,6 @@
       "typeVersion": 2,
       "position": [2700, 200]
     },
-
     {
       "parameters": {
         "respondWith": "json",
@@ -300,7 +214,6 @@
       "typeVersion": 1.1,
       "position": [300, 480]
     },
-
     {
       "parameters": {
         "respondWith": "json",
@@ -313,7 +226,6 @@
       "typeVersion": 1.1,
       "position": [2900, 0]
     },
-
     {
       "parameters": {
         "respondWith": "json",
@@ -327,86 +239,28 @@
       "position": [2900, 200]
     }
   ],
-
   "connections": {
-    "FraudShield Webhook": {
-      "main": [[
-        { "node": "Enrich Payload",   "type": "main", "index": 0 },
-        { "node": "Respond 200 OK",   "type": "main", "index": 0 }
-      ]]
-    },
-    "Enrich Payload": {
-      "main": [[{ "node": "Risk >= 30?", "type": "main", "index": 0 }]]
-    },
-    "Risk >= 30?": {
-      "main": [
-        [{ "node": "LLM — Generate Incident Summary", "type": "main", "index": 0 }],
-        [
-          { "node": "Log Quietly",               "type": "main", "index": 0 },
-          { "node": "Respond — Below Threshold", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "LLM — Generate Incident Summary": {
-      "main": [[{ "node": "Merge LLM + Incident", "type": "main", "index": 0 }]]
-    },
-    "Merge LLM + Incident": {
-      "main": [[{ "node": "CRITICAL?", "type": "main", "index": 0 }]]
-    },
-    "CRITICAL?": {
-      "main": [
-        [{ "node": "Build Approval Email",     "type": "main", "index": 0 }],
-        [{ "node": "Build HIGH Notification",  "type": "main", "index": 0 }]
-      ]
-    },
-    "Build Approval Email": {
-      "main": [[{ "node": "Send Approval Email", "type": "main", "index": 0 }]]
-    },
-    "Send Approval Email": {
-      "main": [[{ "node": "Wait for Human Approval", "type": "main", "index": 0 }]]
-    },
-    "Build HIGH Notification": {
-      "main": [[{ "node": "Slack Notification", "type": "main", "index": 0 }]]
-    },
-    "Slack Notification": {
-      "main": [[{ "node": "Wait for Human Approval", "type": "main", "index": 0 }]]
-    },
-    "Wait for Human Approval": {
-      "main": [[{ "node": "Analyst Approved?", "type": "main", "index": 0 }]]
-    },
-    "Analyst Approved?": {
-      "main": [
-        [{ "node": "Quarantine Confirmed", "type": "main", "index": 0 }],
-        [{ "node": "Mark False Positive",  "type": "main", "index": 0 }]
-      ]
-    },
-    "Quarantine Confirmed": {
-      "main": [[{ "node": "Send Feedback — Phishing Confirmed", "type": "main", "index": 0 }]]
-    },
-    "Mark False Positive": {
-      "main": [[{ "node": "Send Feedback — False Positive", "type": "main", "index": 0 }]]
-    },
-    "Send Feedback — Phishing Confirmed": {
-      "main": [[{ "node": "Final Audit — Quarantine", "type": "main", "index": 0 }]]
-    },
-    "Send Feedback — False Positive": {
-      "main": [[{ "node": "Final Audit — False Positive", "type": "main", "index": 0 }]]
-    },
-    "Final Audit — Quarantine": {
-      "main": [[{ "node": "Respond — Quarantine Complete", "type": "main", "index": 0 }]]
-    },
-    "Final Audit — False Positive": {
-      "main": [[{ "node": "Respond — False Positive Complete", "type": "main", "index": 0 }]]
-    }
+    "FraudShield Webhook": { "main": [[{ "node": "Enrich Payload", "type": "main", "index": 0 }, { "node": "Respond 200 OK", "type": "main", "index": 0 }]] },
+    "Enrich Payload": { "main": [[{ "node": "Risk >= 30?", "type": "main", "index": 0 }]] },
+    "Risk >= 30?": { "main": [[{ "node": "LLM + Incident Log", "type": "main", "index": 0 }], [{ "node": "Log Quietly", "type": "main", "index": 0 }]] },
+    "LLM + Incident Log": { "main": [[{ "node": "CRITICAL?", "type": "main", "index": 0 }]] },
+    "CRITICAL?": { "main": [[{ "node": "Build Approval Email", "type": "main", "index": 0 }], [{ "node": "Build HIGH Notification", "type": "main", "index": 0 }]] },
+    "Build Approval Email": { "main": [[{ "node": "Send Approval Email", "type": "main", "index": 0 }]] },
+    "Send Approval Email": { "main": [[{ "node": "Wait for Human Approval", "type": "main", "index": 0 }]] },
+    "Build HIGH Notification": { "main": [[{ "node": "Log HIGH Alert", "type": "main", "index": 0 }]] },
+    "Wait for Human Approval": { "main": [[{ "node": "Analyst Approved?", "type": "main", "index": 0 }]] },
+    "Analyst Approved?": { "main": [[{ "node": "Quarantine Confirmed", "type": "main", "index": 0 }], [{ "node": "Mark False Positive", "type": "main", "index": 0 }]] },
+    "Quarantine Confirmed": { "main": [[{ "node": "Send Feedback — Phishing Confirmed", "type": "main", "index": 0 }]] },
+    "Mark False Positive": { "main": [[{ "node": "Send Feedback — False Positive", "type": "main", "index": 0 }]] },
+    "Send Feedback — Phishing Confirmed": { "main": [[{ "node": "Final Audit — Quarantine", "type": "main", "index": 0 }]] },
+    "Send Feedback — False Positive": { "main": [[{ "node": "Final Audit — False Positive", "type": "main", "index": 0 }]] },
+    "Final Audit — Quarantine": { "main": [[{ "node": "Respond — Quarantine Complete", "type": "main", "index": 0 }]] },
+    "Final Audit — False Positive": { "main": [[{ "node": "Respond — False Positive Complete", "type": "main", "index": 0 }]] }
   },
-
   "active": true,
   "settings": { "executionOrder": "v1" },
-  "versionId": "2.0.0",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "fraudshield-hack-o-hire"
-  },
-  "id": "fraudshield-incident-response-v2",
-  "tags": [{ "createdAt": "2026-03-24", "name": "FraudShield" }]
+  "versionId": "4.0.0",
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "fraudshield-hack-o-hire" },
+  "id": "fraudshield-incident-response-v4",
+  "tags": [{ "createdAt": "2026-03-25", "name": "FraudShield" }]
 }

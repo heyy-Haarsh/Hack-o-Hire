@@ -154,7 +154,7 @@ https.createServer(sslOptions, (req, res) => {
 
     // ── /credential/* → Credential Scanner — HTTP port 8002 ────
     if (cleanUrl.startsWith('/credential/')) {
-        const targetPath = cleanUrl;
+        const targetPath = cleanUrl.replace('/credential', '');  // strip prefix → /analyze/email
         console.log(`  → Credential Scanner (http:8002) ${targetPath}`);
         proxyRequest(req, res, 8002, targetPath, false);
         return;
