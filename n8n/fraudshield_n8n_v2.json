@@ -304,14 +304,27 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"status\": \"below_threshold\", \"message\": \"Risk score below 30 — logged quietly\" }",
+        "responseBody": "={{ JSON.stringify({ status: 'workflow_complete', action: $json.action_taken, incident_id: $json.incident_id, decision: $json.analyst_decision, message: 'Incident response workflow completed' }) }}",
         "options": {}
       },
-      "id": "node-respond-low",
-      "name": "Respond — Below Threshold",
+      "id": "node-respond-quarantine",
+      "name": "Respond — Quarantine Complete",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [740, 600]
+      "position": [2900, 0]
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'workflow_complete', action: $json.action_taken, incident_id: $json.incident_id, decision: $json.analyst_decision, message: 'False positive marked and queued for retraining' }) }}",
+        "options": {}
+      },
+      "id": "node-respond-fp",
+      "name": "Respond — False Positive Complete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2900, 200]
     }
   ],
 
@@ -355,6 +368,9 @@
     "Build HIGH Notification": {
       "main": [[{ "node": "Slack Notification", "type": "main", "index": 0 }]]
     },
+    "Slack Notification": {
+      "main": [[{ "node": "Wait for Human Approval", "type": "main", "index": 0 }]]
+    },
     "Wait for Human Approval": {
       "main": [[{ "node": "Analyst Approved?", "type": "main", "index": 0 }]]
     },
@@ -375,6 +391,12 @@
     },
     "Send Feedback — False Positive": {
       "main": [[{ "node": "Final Audit — False Positive", "type": "main", "index": 0 }]]
+    },
+    "Final Audit — Quarantine": {
+      "main": [[{ "node": "Respond — Quarantine Complete", "type": "main", "index": 0 }]]
+    },
+    "Final Audit — False Positive": {
+      "main": [[{ "node": "Respond — False Positive Complete", "type": "main", "index": 0 }]]
     }
   },
 
