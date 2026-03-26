@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import csv
+import argparse
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from sklearn.metrics import roc_curve
@@ -52,6 +53,12 @@ def eval_epoch(model, loader):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Train DeepfakeVoiceDetector")
+    parser.add_argument("--finetune", action="store_true",
+                        help="Start from existing best_eer.pt instead of random init. "
+                             "Uses a lower LR (LR/10) and fewer epochs (EPOCHS//2).")
+    args = parser.parse_args()
+
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -59,25 +66,51 @@ def main():
 
     model     = DeepfakeVoiceDetector().to(DEVICE)
     criterion = nn.BCELoss()
-    optimizer = Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-    scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=LR_MIN)
 
-    # ── Resume from checkpoint if it exists ───────────────────────
-    start_epoch = 1
-    best_eer    = 1.0
-    ckpt_path   = MODELS_DIR / "checkpoint_latest.pt"
+    finetune_lr = LR / 10   # gentler LR so we don't overwrite learned weights
+
+    # ── Resume / fine-tune priority ────────────────────────────────
+    # 1. checkpoint_latest.pt  (interrupted run → resume)
+    # 2. best_eer.pt + --finetune flag  (fine-tune on new data)
+    # 3. fresh random init
+    start_epoch  = 1
+    best_eer     = 1.0
+    ckpt_path    = MODELS_DIR / "checkpoint_latest.pt"
+    best_pt_path = MODELS_DIR / "best_eer.pt"
+    actual_lr    = LR
+    actual_epochs = EPOCHS
 
     if ckpt_path.exists():
         print(f"Resuming from {ckpt_path}...")
         ckpt = torch.load(ckpt_path, map_location=DEVICE)
         model.load_state_dict(ckpt["model"])
+        optimizer = Adam(model.parameters(), lr=actual_lr, weight_decay=WEIGHT_DECAY)
+        scheduler = CosineAnnealingLR(optimizer, T_max=actual_epochs, eta_min=LR_MIN)
         optimizer.load_state_dict(ckpt["optimizer"])
         scheduler.load_state_dict(ckpt["scheduler"])
         start_epoch = ckpt["epoch"] + 1
         best_eer    = ckpt["best_eer"]
         print(f"  Resumed from epoch {ckpt['epoch']}  best_EER={best_eer:.4f}")
+
+    elif args.finetune and best_pt_path.exists():
+        print(f"Fine-tuning from {best_pt_path} ...")
+        state = torch.load(best_pt_path, map_location=DEVICE, weights_only=False)
+        if isinstance(state, dict) and "model" in state:
+            model.load_state_dict(state["model"])
+        else:
+            model.load_state_dict(state)
+        actual_lr     = finetune_lr
+        actual_epochs = max(EPOCHS // 2, 10)
+        print(f"  LR={actual_lr}  epochs={actual_epochs}  (fine-tune mode)")
+        optimizer = Adam(model.parameters(), lr=actual_lr, weight_decay=WEIGHT_DECAY)
+        scheduler = CosineAnnealingLR(optimizer, T_max=actual_epochs, eta_min=LR_MIN)
+
     else:
-        print(f"Starting fresh training for {EPOCHS} epochs on {DEVICE}")
+        if args.finetune:
+            print(f"Warning: --finetune set but {best_pt_path} not found. Starting fresh.")
+        print(f"Starting fresh training for {actual_epochs} epochs on {DEVICE}")
+        optimizer = Adam(model.parameters(), lr=actual_lr, weight_decay=WEIGHT_DECAY)
+        scheduler = CosineAnnealingLR(optimizer, T_max=actual_epochs, eta_min=LR_MIN)
 
     log_path = OUTPUTS_DIR / "training_log.csv"
     if not ckpt_path.exists():
@@ -86,7 +119,7 @@ def main():
 
     print("=" * 55)
 
-    for epoch in range(start_epoch, EPOCHS + 1):
+    for epoch in range(start_epoch, actual_epochs + 1):
         loss          = train_epoch(model, train_loader, optimizer, criterion)
         val_eer, _, _ = eval_epoch(model, val_loader)
         scheduler.step()
@@ -106,7 +139,7 @@ def main():
             "best_eer":  best_eer,
         }, ckpt_path)
 
-        print(f"Epoch {epoch:02d}/{EPOCHS}  "
+        print(f"Epoch {epoch:02d}/{actual_epochs}  "
               f"loss={loss:.4f}  "
               f"val_EER={val_eer:.4f}{status}")
 

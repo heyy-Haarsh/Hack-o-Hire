@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "PhishGuard – AI Security Shield",
+  "version": "2.0.0",
+  "description": "Real-time AI phishing detection powered by XGBoost ML + SSL + WHOIS + Cookie Analysis.",
+  "permissions": [
+    "cookies",
+    "tabs",
+    "activeTab",
+    "storage",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": ["*://*/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "logo.png",
+      "48": "logo.png",
+      "128": "logo.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  }
+}

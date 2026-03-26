@@ -1,0 +1,11 @@
+{
+  "EER": 0.2519,
+  "AUC_ROC": 0.8214,
+  "Accuracy": 0.5234,
+  "Precision_fake": 0.9873,
+  "Recall_fake": 0.485,
+  "F1_fake": 0.6505,
+  "Precision_real": 0.1451,
+  "Recall_real": 0.9336,
+  "F1_real": 0.2511
+}

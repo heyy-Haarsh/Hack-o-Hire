@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="hdr-left">
+            <span class="logo-icon">🛡</span>
+            <div>
+                <div class="brand">PhishGuard</div>
+                <div class="brand-sub">AI Security Shield</div>
+            </div>
+        </div>
+        <button id="rescan-btn" class="icon-btn" title="Re-scan">↺</button>
+    </header>
+
+    <!-- Dynamic content area -->
+    <main id="main-content">
+        <div class="scanning-wrap">
+            <div class="spinner"></div>
+            <p class="scan-text">Scanning page…</p>
+            <p class="scan-sub">Please wait</p>
+        </div>
+    </main>
+
+    <!-- Footer actions -->
+    <footer>
+        <button id="open-dash-btn" class="dash-btn">Open Full Dashboard ↗</button>
+    </footer>
+
+    <script src="popup.js"></script>
+</body>
+</html>

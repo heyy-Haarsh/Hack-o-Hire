@@ -62,6 +62,7 @@ def process_split(split: str):
 
     seqs, aggs, labels = [], [], []
     errors = 0
+    is_train = (split == "train")
 
     for _, row in tqdm(df.iterrows(), total=len(df),
                        desc=f"  {split}"):
@@ -69,15 +70,15 @@ def process_split(split: str):
             y      = load_audio(row["file"])
             chunks = chunk_audio(y)
             for chunk in chunks:
-                seqs.append(extract_sequence(chunk))
-                aggs.append(extract_aggregate(chunk))
+                seqs.append(extract_sequence(chunk, augment=is_train))
+                aggs.append(extract_aggregate(chunk, augment=is_train))
                 labels.append(row["label"])
         except Exception as e:
             errors += 1
             if errors <= 3:
                 print(f"\n  Warning: skipped {row['file']} — {e}")
 
-    out_dir = DATA_PROC / split
+    out_dir = DATA_PROC / {"train": "train_split", "dev": "val_split", "eval": "eval"}[split]
     out_dir.mkdir(parents=True, exist_ok=True)
 
     np.save(out_dir / "sequences.npy",  np.array(seqs,   dtype=np.float32))
@@ -94,7 +95,7 @@ def process_split(split: str):
 if __name__ == "__main__":
     print("FraudShield — Feature Pre-computation")
     print("Using official ASVspoof 2019 LA protocols")
-    print("train=train  |  dev=eval  |  eval=eval")
+    print("train→train_split  |  dev→val_split  |  eval→eval")
     print("Estimated time: 30-60 min")
     print("=" * 50)
 

@@ -8,14 +8,28 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import SAMPLE_RATE, CLIP_SAMPLES, N_MFCC, N_FFT, HOP_LENGTH
 
 # ── Augmentation pipeline (training time only) ─────────────────────
-AUGMENT = A.Compose([
+_aug_transforms = [
     A.AddGaussianNoise(min_amplitude=0.001, max_amplitude=0.025, p=0.7),
-    A.Mp3Compression(min_bitrate=8, max_bitrate=64, p=0.7),
+    A.Mp3Compression(min_bitrate=8, max_bitrate=320, p=0.8),
     A.PitchShift(min_semitones=-3, max_semitones=3, p=0.4),
     A.TimeStretch(min_rate=0.85, max_rate=1.15, p=0.4),
-    A.LowPassFilter(min_cutoff_freq=1000, max_cutoff_freq=4000, p=0.5),
+    A.LowPassFilter(min_cutoff_freq=1000, max_cutoff_freq=7000, p=0.5),
     A.Gain(min_gain_db=-6, max_gain_db=6, p=0.5),
-])
+]
+try:
+    _aug_transforms.append(A.RoomSimulator(p=0.3))
+except Exception:
+    pass  # pyroomacoustics not available — skip room simulation
+
+AUGMENT = A.Compose(_aug_transforms)
+
+
+def _safe_augment(y: np.ndarray) -> np.ndarray:
+    """Apply augmentation, silently fall back to original audio on any error."""
+    try:
+        return AUGMENT(samples=y, sample_rate=SAMPLE_RATE)
+    except Exception:
+        return y
 
 # src/features.py — replace load_audio() with this
 
@@ -97,17 +111,25 @@ def chunk_audio(y: np.ndarray) -> list:
 
 def extract_sequence(y: np.ndarray, augment: bool = False) -> np.ndarray:
     """
-    Returns MFCC matrix shape [N_MFCC, T] — input to CNN+LSTM.
+    Returns CMN-normalised MFCC matrix shape [N_MFCC, T].
     T ≈ 94 frames for a 3-second clip at hop_length=512, sr=16000.
+
+    CMN (Cepstral Mean Normalisation) subtracts the per-coefficient mean
+    across time, removing codec-induced DC offsets so features are
+    format-agnostic (FLAC ≈ WAV ≈ MP3 ≈ M4A after normalisation).
+    Applied at both train and inference time so the model learns
+    CMN-normalised features.
     """
     if augment:
-        y = AUGMENT(samples=y, sample_rate=SAMPLE_RATE)
+        y = _safe_augment(y)
     mfcc = librosa.feature.mfcc(
         y=y, sr=SAMPLE_RATE,
         n_mfcc=N_MFCC,
         n_fft=N_FFT,
         hop_length=HOP_LENGTH
     )
+    # CMN: subtract per-coefficient mean across time axis
+    mfcc = mfcc - mfcc.mean(axis=1, keepdims=True)
     return mfcc.astype(np.float32)
 
 def extract_aggregate(y: np.ndarray, augment: bool = False) -> np.ndarray:
@@ -116,7 +138,7 @@ def extract_aggregate(y: np.ndarray, augment: bool = False) -> np.ndarray:
     Combines MFCC + deltas + spectral features, each with mean + std.
     """
     if augment:
-        y = AUGMENT(samples=y, sample_rate=SAMPLE_RATE)
+        y = _safe_augment(y)
 
     mfcc      = librosa.feature.mfcc(y=y, sr=SAMPLE_RATE, n_mfcc=N_MFCC,
                                       n_fft=N_FFT, hop_length=HOP_LENGTH)

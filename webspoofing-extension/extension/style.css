@@ -1,0 +1,260 @@
+/* PhishGuard Popup – White Minimal Style */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --text:    #0f172a;
+    --sub:     #64748b;
+    --muted:   #94a3b8;
+    --border:  #e2e8f0;
+    --bg:      #ffffff;
+    --bg-soft: #f8fafc;
+    --safe:    #059669;
+    --warn:    #d97706;
+    --danger:  #dc2626;
+    --blue:    #2563eb;
+    --r:       8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    width: 340px;
+    min-width: 340px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ─ Header ─ */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-soft);
+}
+.hdr-left { display: flex; align-items: center; gap: 9px; }
+.logo-icon {
+    font-size: 1.35rem;
+    width: 34px; height: 34px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.brand     { font-size: 0.88rem; font-weight: 700; color: var(--blue); }
+.brand-sub { font-size: 0.66rem; color: var(--muted); }
+
+.icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--sub);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.icon-btn:hover { background: #eff6ff; border-color: #bfdbfe; color: var(--blue); }
+
+/* ─ Main content ─ */
+main {
+    padding: 0;
+    min-height: 60px;
+}
+
+/* ─ Scanning state ─ */
+.scanning-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 14px;
+    gap: 6px;
+}
+.spinner {
+    width: 28px; height: 28px;
+    border: 2.5px solid #dbeafe;
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    margin-bottom: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.scan-text { font-size: 0.84rem; font-weight: 600; color: var(--text); }
+.scan-sub  { font-size: 0.74rem; color: var(--muted); }
+
+/* ─ Verdict Row ─ */
+.verdict-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid var(--border);
+}
+.verdict-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+.verdict-text { flex: 1; min-width: 0; }
+.verdict-label {
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+.verdict-host {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.verdict-score {
+    font-size: 1.3rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* verdict color classes */
+.verdict-safe    .verdict-label,
+.verdict-safe    .verdict-score { color: var(--safe); }
+.verdict-warn    .verdict-label,
+.verdict-warn    .verdict-score { color: var(--warn); }
+.verdict-danger  .verdict-label,
+.verdict-danger  .verdict-score { color: var(--danger); }
+
+/* ─ Score bar ─ */
+.score-track {
+    height: 4px;
+    background: var(--border);
+    margin: 0 14px 0;
+}
+.score-fill {
+    height: 100%;
+    border-radius: 0;
+    transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+    min-width: 2px;
+}
+
+/* ─ Stats grid ─ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+    margin-top: 2px;
+}
+.stat-cell {
+    padding: 10px 4px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+}
+.stat-cell:last-child { border-right: none; }
+.stat-val {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+}
+.stat-key {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+/* colour helpers */
+.col-safe   { color: var(--safe); }
+.col-warn   { color: var(--warn); }
+.col-danger { color: var(--danger); }
+
+/* ─ Sections ─ */
+.section-head {
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    padding: 8px 14px 4px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-soft);
+}
+
+.reasons-list, .issues-list {
+    border-bottom: 1px solid var(--border);
+}
+
+.reason-row, .issue-row {
+    font-size: 0.77rem;
+    color: var(--sub);
+    padding: 6px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    line-height: 1.45;
+}
+.reason-row:last-child,
+.issue-row:last-child { border-bottom: none; }
+
+.all-clear {
+    font-size: 0.8rem;
+    color: var(--safe);
+    padding: 12px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+/* ─ ML Summary ─ */
+.ml-summary {
+    font-size: 0.76rem;
+    color: var(--sub);
+    padding: 8px 14px;
+    line-height: 1.6;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border);
+}
+
+/* ─ Footer row inside main ─ */
+.footer-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 14px;
+    font-size: 0.66rem;
+    color: var(--muted);
+    background: var(--bg-soft);
+}
+
+/* ─ Error box ─ */
+.error-box {
+    padding: 14px;
+    font-size: 0.8rem;
+    color: var(--danger);
+    background: #fef2f2;
+    border-bottom: 1px solid #fecaca;
+    line-height: 1.5;
+}
+
+/* ─ Footer (fixed) ─ */
+footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-soft);
+}
+.dash-btn {
+    width: 100%;
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: var(--r);
+    padding: 9px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: background 0.15s;
+}
+.dash-btn:hover { background: #1d4ed8; }
