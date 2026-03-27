@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>FraudShield — Email Analyzer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { display: flex; align-items: center; justify-content: space-between; background: #00395d; color: white; padding: 12px 16px; margin: -20px -20px 20px; }
+        .header h2 { margin: 0; color: white; font-size: 15px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-primary { background-color: #00AEEF; color: white; }
+        .btn-primary:hover { background-color: #0095c4; }
+        .risk-indicator { padding: 15px; border-radius: 8px; color: white; font-weight: bold; text-align: center; margin-bottom: 20px; font-size: 20px; }
+        .section { background-color: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section h4 { margin-top: 0; margin-bottom: 10px; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; font-size: 13px; }
+        .finding-category { margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; }
+        .finding-category h4 { font-size: 12px; margin: 0 0 5px 0; border-bottom: none; color: #555; }
+        .issue { color: #dc3545; font-size: 12px; margin: 3px 0; list-style: none; padding-left: 0; }
+        .safe { color: #28a745; font-size: 12px; margin: 0; }
+        .recommendations ul { margin: 0; padding-left: 0; }
+        .recommendations li { color: #856404; background-color: #fff3cd; padding: 5px 10px; margin: 4px 0; border-radius: 4px; list-style-type: none; font-size: 12px; }
+        .explanation { font-size: 12px; color: #555; margin: 4px 0; padding: 4px 6px; background-color: #f8f9fa; border-radius: 4px; }
+        .loading { text-align: center; padding: 40px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #00AEEF; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #feedback-section { background: white; border-radius: 8px; padding: 14px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 3px solid #00AEEF; }
+        #feedback-section h4 { margin: 0 0 6px; font-size: 13px; color: #333; }
+        #feedback-section p { font-size: 12px; color: #666; margin: 0 0 10px; }
+        .feedback-buttons { display: flex; gap: 8px; }
+        #btn-safe { flex: 1; background: #28a745; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        #btn-safe:hover:not(:disabled) { background: #218838; }
+        #btn-phish { flex: 1; background: #dc3545; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        #btn-phish:hover:not(:disabled) { background: #c82333; }
+        #btn-safe:disabled, #btn-phish:disabled { cursor: not-allowed; opacity: 0.6; }
+        #feedback-message { margin-top: 8px; min-height: 20px; }
+        .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <h2>📧 Email Phishing Analyzer</h2>
+            <button id="refresh-btn" class="btn btn-primary">↻</button>
+        </div>
+
+        <button id="analyze-btn" class="btn btn-primary" style="width:100%;margin-bottom:20px;padding:10px;">
+            Analyze Current Email
+        </button>
+
+        <div id="loading" class="loading" style="display:none;">
+            <div class="spinner"></div>
+            <p style="color:#666;font-size:13px">Analyzing email...</p>
+        </div>
+
+        <div id="error" style="display:none; color:#721c24; background-color:#f8d7da; border:1px solid #f5c6cb; padding:10px; border-radius:4px; margin-bottom:15px; font-size:13px;"></div>
+
+        <div id="results" style="display:none;">
+            <div id="risk-indicator" class="risk-indicator"></div>
+            <div class="section">
+                <h4>Findings</h4>
+                <div id="findings-container"></div>
+            </div>
+            <div class="section recommendations">
+                <div id="recommendations"></div>
+            </div>
+            <div class="section">
+                <div id="explanations"></div>
+            </div>
+            <div id="attachments"></div>
+        </div>
+
+        <div id="feedback-section" style="display:none;">
+            <h4>📊 Was this email assessment correct?</h4>
+            <p>Your feedback is saved to PostgreSQL and queued for model retraining.</p>
+            <div class="feedback-buttons">
+                <button id="btn-safe">✓ Safe — Not Phishing</button>
+                <button id="btn-phish">⚠ Confirm Phishing</button>
+            </div>
+            <div id="feedback-message"></div>
+        </div>
+
+        <div class="footer">
+            Confidential — Barclays Internal Use Only<br>
+            Powered by FraudShield AI
+        </div>
+
+    </div>
+
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="email-pane.js"></script>
+</body>
+</html>

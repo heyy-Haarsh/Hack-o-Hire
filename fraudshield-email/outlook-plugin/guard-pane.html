@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>FraudShield — Prompt Injection Guard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { background: #00395d; color: white; padding: 12px 16px; margin: -20px -20px 20px; }
+        .header h2 { margin: 0; color: white; font-size: 15px; }
+        #guard-section { background: white; border-radius: 8px; padding: 14px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 3px solid #e83e8c; }
+        #guard-section h4 { margin: 0 0 6px; font-size: 13px; color: #333; }
+        #guard-section p { font-size: 12px; color: #666; margin: 0 0 8px; }
+        #guard-prompt { width: 100%; box-sizing: border-box; height: 90px; font-size: 12px; font-family: 'Segoe UI', sans-serif; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px; resize: vertical; margin-bottom: 8px; }
+        #guard-prompt:focus { outline: none; border-color: #e83e8c; }
+        #btn-guard-scan { width: 100%; background: #e83e8c; color: white; border: none; padding: 9px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        #btn-guard-scan:hover:not(:disabled) { background: #c2185b; }
+        #btn-guard-scan:disabled { opacity: 0.6; cursor: not-allowed; }
+        #btn-guard-autofill { width: 100%; background: #f8f9fa; color: #555; border: 1px solid #ccc; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 8px; }
+        #btn-guard-autofill:hover { background: #e9ecef; }
+        #guard-result { font-size: 12px; min-height: 20px; }
+        .guard-layer-row { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; color: #555; }
+        .guard-layer-score { font-weight: 600; }
+        .layers-section { background: white; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .layers-section h4 { margin: 0 0 8px; font-size: 12px; color: #333; text-transform: uppercase; letter-spacing: 0.5px; }
+        .layer-item { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 11px; color: #555; }
+        .layer-badge { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <h2>🔒 Prompt Injection Guard</h2>
+        </div>
+
+        <div id="guard-section">
+            <h4>🔒 Prompt Injection Scanner</h4>
+            <p>Detects attempts to hijack the AI assistant via crafted prompts — 4-layer detection (regex, YARA, transformer, canary).</p>
+
+            <button id="btn-guard-autofill">📋 Auto-fill from current email body</button>
+
+            <textarea id="guard-prompt"
+                placeholder="Paste or type a prompt to scan for injection attempts..."></textarea>
+
+            <button id="btn-guard-scan">🔍 Scan for Prompt Injection</button>
+            <div id="guard-result"></div>
+        </div>
+
+        <div class="layers-section">
+            <h4>Detection layers</h4>
+            <div class="layer-item"><span class="layer-badge" style="background:#e83e8c"></span> <span><strong>Regex</strong> — known injection patterns &amp; keywords</span></div>
+            <div class="layer-item"><span class="layer-badge" style="background:#fd7e14"></span> <span><strong>YARA</strong> — rule-based structural matching</span></div>
+            <div class="layer-item"><span class="layer-badge" style="background:#6f42c1"></span> <span><strong>Transformer</strong> — ML classifier for subtle attacks</span></div>
+            <div class="layer-item"><span class="layer-badge" style="background:#17a2b8"></span> <span><strong>Canary</strong> — token-based exfiltration detection</span></div>
+        </div>
+
+        <div class="footer">
+            Confidential — Barclays Internal Use Only<br>
+            Powered by FraudShield AI
+        </div>
+
+    </div>
+
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="guard-pane.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>FraudShield — Voice Deepfake Detector</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { background: #00395d; color: white; padding: 12px 16px; margin: -20px -20px 20px; }
+        .header h2 { margin: 0; color: white; font-size: 15px; }
+        .intro { background: white; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 12px; color: #555; border-top: 3px solid #28a745; }
+        .intro p { margin: 0; }
+        #voice-section { background: white; border-radius: 8px; padding: 14px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #voice-section h4 { margin: 0 0 6px; font-size: 13px; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; }
+        #voice-section p { font-size: 12px; color: #666; margin: 0 0 10px; }
+        .voice-buttons { display: flex; gap: 8px; margin-bottom: 8px; }
+        #btn-record { flex: 1; background: #28a745; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        #btn-record:hover:not(:disabled) { background: #218838; }
+        #btn-stop { flex: 1; background: #dc3545; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        #btn-stop:hover:not(:disabled) { background: #c82333; }
+        #btn-record:disabled, #btn-stop:disabled { cursor: not-allowed; opacity: 0.5; }
+        .upload-label { display: block; text-align: center; padding: 8px; background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; font-size: 12px; color: #555; cursor: pointer; margin-bottom: 8px; }
+        .upload-label:hover { background: #e9ecef; border-color: #999; }
+        #voice-result { font-size: 12px; min-height: 20px; margin-top: 6px; }
+        .how-it-works { background: white; border-radius: 8px; padding: 12px 14px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .how-it-works h4 { margin: 0 0 8px; font-size: 12px; color: #333; text-transform: uppercase; letter-spacing: 0.5px; }
+        .how-it-works ul { margin: 0; padding-left: 16px; }
+        .how-it-works li { font-size: 11px; color: #666; margin: 3px 0; }
+        .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <h2>🎙 Voice Deepfake Detector</h2>
+        </div>
+
+        <div class="intro">
+            <p>If you receive a suspicious call alongside this email, record the caller's voice or upload a recording to check for AI-generated deepfakes.</p>
+        </div>
+
+        <div id="voice-section">
+            <h4>🎙 Live Call Voice Analysis</h4>
+            <p>Record the caller's voice or upload a voice file to detect AI-generated audio.</p>
+
+            <div class="voice-buttons">
+                <button id="btn-record">● Start Recording</button>
+                <button id="btn-stop" disabled>■ Stop &amp; Analyze</button>
+            </div>
+
+            <label class="upload-label" for="btn-upload-audio">
+                📂 Or upload a voice recording (.wav .mp3 .flac .ogg)
+                <input type="file" id="btn-upload-audio"
+                       accept=".wav,.mp3,.flac,.ogg,.m4a,.webm"
+                       style="display:none">
+            </label>
+
+            <div id="voice-result"></div>
+        </div>
+
+        <div class="how-it-works">
+            <h4>How it works</h4>
+            <ul>
+                <li>Deep neural network (LCNN) scores voice authenticity</li>
+                <li>Random forest ensemble for secondary verification</li>
+                <li>Score 0–100: higher = more likely AI-generated</li>
+                <li>Supports WAV, MP3, FLAC, OGG, WebM formats</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            Confidential — Barclays Internal Use Only<br>
+            Powered by FraudShield AI
+        </div>
+
+    </div>
+
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="voice-pane.js"></script>
+</body>
+</html>
